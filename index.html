@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Fetcher</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            text-align: center;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .output {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Get Email from API</h1>
+    <button id="getEmailBtn">GET EMAIL</button>
+    <div class="output">
+        <p id="emailOutput"></p>
+        <p id="valueOutput"></p>
+    </div>
+
+    <script>
+        document.getElementById('getEmailBtn').addEventListener('click', async function() {
+            // Fetch the email
+            const emailResponse = await fetch('https://api.kopeechka.store/mailbox-get-email?site=instagram.com&mail_type=gmail.com&token=492cca6f3d079f1b88c7b3eedb35347e');
+            const emailData = await emailResponse.json();
+
+            if (emailData.status === 'OK') {
+                document.getElementById('emailOutput').textContent = `Email: ${emailData.mail}`;
+
+                // Start checking for the message every 15 seconds
+                const checkMessageInterval = setInterval(async function() {
+                    const messageResponse = await fetch(`https://api.kopeechka.store/mailbox-get-message?id=${emailData.id}&token=492cca6f3d079f1b88c7b3eedb35347e&type=1`);
+                    const messageData = await messageResponse.json();
+
+                    if (messageData.status === 'OK') {
+                        document.getElementById('valueOutput').textContent = `Value: ${messageData.value}`;
+                        clearInterval(checkMessageInterval); // Stop polling once the value is retrieved
+                    }
+                }, 15000); // Check every 15 seconds
+            } else {
+                document.getElementById('emailOutput').textContent = 'Failed to retrieve email.';
+            }
+        });
+    </script>
+</body>
+</html>
