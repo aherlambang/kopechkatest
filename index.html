@@ -5,110 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Get Email</title>
     <style>
-        /* Simple styles for button, spinner, and cancel button */
-        #spinner {
-            display: none;
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border-left-color: #09f;
-            animation: spin 1s linear infinite;
-            margin: 10px auto;
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
         }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        #result, #waiting-text, #cancel-button {
-            display: none;
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
             text-align: center;
-            margin-top: 10px;
+            width: 90%;
+            max-width: 400px;
         }
 
         button {
-            margin-top: 20px;
-        }
-    </style>
-</head>
-<body>
-    <div style="text-align: center;">
-        <button onclick="getEmail()">GET EMAIL</button>
-        <div id="email"></div>
-
-        <!-- Spinner, waiting text, and cancel button -->
-        <div id="spinner"></div>
-        <div id="waiting-text">Waiting for code...</div>
-        <button id="cancel-button" onclick="cancelRequest()">CANCEL</button>
-
-        <div id="result"></div>
-    </div>
-
-    <script>
-        let emailId;
-        let interval;
-
-        function getEmail() {
-            fetch('https://api.kopeechka.store/mailbox-get-email?site=instagram.com&mail_type=gmail.com&token=492cca6f3d079f1b88c7b3eedb35347e')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === "OK") {
-                        document.getElementById('email').innerText = "Email: " + data.mail;
-                        emailId = data.id;
-
-                        // Show the cancel button
-                        document.getElementById('cancel-button').style.display = 'block';
-
-                        // Start polling for the code
-                        startPolling();
-                    } else {
-                        document.getElementById('email').innerText = "Failed to get email!";
-                    }
-                })
-                .catch(error => console.error('Error fetching email:', error));
-        }
-
-        function startPolling() {
-            document.getElementById('spinner').style.display = 'block';
-            document.getElementById('waiting-text').style.display = 'block';
-            
-            interval = setInterval(() => {
-                fetch(`https://api.kopeechka.store/mailbox-get-message?id=${emailId}&token=492cca6f3d079f1b88c7b3eedb35347e&type=1`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === "OK") {
-                            clearInterval(interval);
-                            
-                            document.getElementById('spinner').style.display = 'none';
-                            document.getElementById('waiting-text').style.display = 'none';
-                            document.getElementById('cancel-button').style.display = 'none';  // Hide cancel button
-                            document.getElementById('result').innerText = "Code: " + data.value;
-                            document.getElementById('result').style.display = 'block';
-                        }
-                    })
-                    .catch(error => console.error('Error fetching code:', error));
-            }, 15000);
-        }
-
-        function cancelRequest() {
-            clearInterval(interval);  // Stop the polling
-            fetch(`https://api.kopeechka.store/mailbox-cancel?id=${emailId}&token=492cca6f3d079f1b88c7b3eedb35347e`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === "OK") {
-                        alert("Request canceled successfully.");
-                    } else {
-                        alert("Failed to cancel the request.");
-                    }
-
-                    // Hide the spinner, waiting text, and cancel button
-                    document.getElementById('spinner').style.display = 'none';
-                    document.getElementById('waiting-text').style.display = 'none';
-                    document.getElementById('cancel-button').style.display = 'none';
-                })
-                .catch(error => console.error('Error cancelling request:', error));
-        }
-    </script>
-</body>
-</html>
+            background-color: #007bff;
+            col
