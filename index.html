@@ -5,40 +5,103 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Email Fetcher</title>
     <style>
+        /* CSS Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Arial', sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
+            background-color: #f0f4f8;
             margin: 0;
+            padding: 20px;
         }
+        
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 300px;
+            max-width: 100%;
+        }
+
+        .dropdown, button {
+            margin: 10px 0;
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            width: 100%;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
         #loading {
             display: none;
+            font-style: italic;
+            color: #555;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .result {
+            margin-top: 20px;
+        }
+
+        .copy-btn {
+            background-color: #28a745;
+            color: white;
+            margin-left: 5px;
+            border: none;
+            padding: 5px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+        
+        .copy-btn:hover {
+            background-color: #218838;
         }
     </style>
 </head>
 <body>
-    <!-- Dropdown for Email Provider -->
-    <label for="emailProvider">Choose your email provider:</label>
-    <select id="emailProvider">
-        <option value="gmail.com">Gmail</option>
-        <option value="mail.ru">Mail.ru</option>
-    </select>
+    <div class="container">
+        <label for="emailProvider">Choose your email provider:</label>
+        <select id="emailProvider" class="dropdown">
+            <option value="gmail.com">Gmail</option>
+            <option value="mail.ru">Mail.ru</option>
+        </select>
 
-    <!-- Button to Get Email -->
-    <button id="getEmailBtn">GET EMAIL</button>
+        <button id="getEmailBtn">GET EMAIL</button>
 
-    <!-- Display Email -->
-    <div id="emailSection" style="margin-top: 10px;">
-        <p>Email: <span id="emailDisplay"></span></p>
-        <button id="copyEmailBtn" onclick="copyToClipboard('emailDisplay')" style="display: none;">Copy Email</button>
-        <p id="loading">🔄 Waiting for code...</p>
-        <button id="cancelBtn" style="display: none;">CANCEL</button>
+        <div id="emailSection" class="result">
+            <p>Email: <span id="emailDisplay"></span> 
+                <button id="copyEmailBtn" class="copy-btn hidden" onclick="copyToClipboard('emailDisplay')">Copy Email</button>
+            </p>
+            <p id="loading">🔄 Waiting for code...</p>
+            <button id="cancelBtn" class="hidden">CANCEL</button>
+        </div>
     </div>
 
-    <!-- JavaScript to handle interactions -->
     <script>
         let requestId;
 
@@ -49,19 +112,28 @@
 
         function getEmail(mailType) {
             document.getElementById('loading').style.display = 'block';
-            document.getElementById('cancelBtn').style.display = 'none';
+            document.getElementById('cancelBtn').classList.add('hidden');
+            document.getElementById('emailDisplay').textContent = ''; // Clear previous email
+            document.getElementById('copyEmailBtn').classList.add('hidden');
 
             fetch(`https://api.kopeechka.store/mailbox-get-email?site=instagram.com&mail_type=${mailType}&token=492cca6f3d079f1b88c7b3eedb35347e`)
                 .then(response => response.json())
                 .then(data => {
-                    const email = data.email;
+                    const email = data.email; // Get the email from response
                     requestId = data.id; // Store the request ID for the cancel function
-                    document.getElementById('emailDisplay').textContent = email;
-                    document.getElementById('loading').style.display = 'none';
-                    document.getElementById('copyEmailBtn').style.display = 'inline';
-                    document.getElementById('cancelBtn').style.display = 'inline';
+                    
+                    if (email) {
+                        document.getElementById('emailDisplay').textContent = email; // Show the email
+                        document.getElementById('copyEmailBtn').classList.remove('hidden');
+                    }
+
+                    document.getElementById('loading').style.display = 'none'; // Hide loading text
+                    document.getElementById('cancelBtn').classList.remove('hidden');
                 })
-                .catch(error => console.error('Error fetching email:', error));
+                .catch(error => {
+                    console.error('Error fetching email:', error);
+                    document.getElementById('loading').style.display = 'none'; // Hide loading text
+                });
         }
 
         document.getElementById('cancelBtn').addEventListener('click', function () {
