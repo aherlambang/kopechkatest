@@ -104,38 +104,47 @@
 
     <script>
         let requestId;
-
+    
         document.getElementById('getEmailBtn').addEventListener('click', function () {
             const emailProvider = document.getElementById('emailProvider').value;
             getEmail(emailProvider);
         });
-
+    
         function getEmail(mailType) {
             document.getElementById('loading').style.display = 'block';
             document.getElementById('cancelBtn').classList.add('hidden');
             document.getElementById('emailDisplay').textContent = ''; // Clear previous email
             document.getElementById('copyEmailBtn').classList.add('hidden');
-
+    
             fetch(`https://api.kopeechka.store/mailbox-get-email?site=instagram.com&mail_type=${mailType}&token=492cca6f3d079f1b88c7b3eedb35347e`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
                 .then(data => {
-                    const email = data.email; // Get the email from response
-                    requestId = data.id; // Store the request ID for the cancel function
-                    
-                    if (email) {
+                    console.log('API Response:', data); // Debugging log to check response data
+                    if (data.status === 'OK' && data.mail) { // Check if the status is OK and mail is present
+                        const email = data.mail; // Correctly access the mail field
+                        requestId = data.id; // Store the request ID for the cancel function
+                        
                         document.getElementById('emailDisplay').textContent = email; // Show the email
                         document.getElementById('copyEmailBtn').classList.remove('hidden');
+                    } else {
+                        alert('Email not found in the response. Please try again.');
                     }
-
+    
                     document.getElementById('loading').style.display = 'none'; // Hide loading text
                     document.getElementById('cancelBtn').classList.remove('hidden');
                 })
                 .catch(error => {
                     console.error('Error fetching email:', error);
                     document.getElementById('loading').style.display = 'none'; // Hide loading text
+                    alert('Failed to fetch the email. Please check the console for more details.');
                 });
         }
-
+    
         document.getElementById('cancelBtn').addEventListener('click', function () {
             if (!requestId) return;
             const url = `https://api.kopeechka.store/mailbox-cancel?id=${requestId}&token=492cca6f3d079f1b88c7b3eedb35347e`;
@@ -144,7 +153,7 @@
                 .then(data => console.log('Request cancelled:', data))
                 .catch(error => console.error('Error cancelling request:', error));
         });
-
+    
         function copyToClipboard(elementId) {
             const text = document.getElementById(elementId).textContent;
             navigator.clipboard.writeText(text)
@@ -152,5 +161,6 @@
                 .catch(err => console.error('Error copying to clipboard:', err));
         }
     </script>
+
 </body>
 </html>
