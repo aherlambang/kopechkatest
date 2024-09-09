@@ -81,29 +81,56 @@
         .copy-btn:hover {
             background-color: #218838;
         }
+
+        #waitingSpinner {
+            display: none;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin-top: 10px;
+        }
+    
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <label for="emailProvider">Choose your email provider:</label>
-        <select id="emailProvider" class="dropdown">
-            <option value="gmail.com">Gmail</option>
-            <option value="mail.ru">Mail.ru</option>
+        <select id="emailProvider">
+            <option value="gmail.com">gmail.com</option>
+            <option value="mail.ru">mail.ru</option>
+            <option value="gmx.com">gmx.com</option>
         </select>
 
+
+        <!-- Button to fetch email -->
         <button id="getEmailBtn">GET EMAIL</button>
 
-        <div id="emailSection" class="result">
-            <p>Email: <span id="emailDisplay"></span> 
-                <button id="copyEmailBtn" class="copy-btn hidden" onclick="copyToClipboard('emailDisplay')">Copy Email</button>
-            </p>
-            <p id="loading">🔄 Waiting for code...</p>
-            <button id="cancelBtn" class="hidden">CANCEL</button>
-        </div>
+        <!-- Spinner and waiting text -->
+        <div id="waitingSpinner"></div>
+        <p id="waitingText" style="display: none;">Waiting for code...</p>
+
+        <!-- Display fetched email -->
+        <p id="emailDisplay"></p>
+        <button id="copyEmailBtn" onclick="copyToClipboard('emailDisplay')" class="hidden">Copy Email</button>
+
+        <!-- Display fetched code -->
+        <p id="codeDisplay"></p>
+        <button id="copyCodeBtn" onclick="copyToClipboard('codeDisplay')" class="hidden">Copy Code</button>
+
+        <!-- Cancel button -->
+        <button id="cancelBtn" class="hidden">Cancel</button>
     </div>
 
     <script>
         let requestId;
+        let checkInterval;
     
         document.getElementById('getEmailBtn').addEventListener('click', function () {
             const emailProvider = document.getElementById('emailProvider').value;
@@ -115,34 +142,48 @@
             document.getElementById('cancelBtn').classList.add('hidden');
             document.getElementById('emailDisplay').textContent = ''; // Clear previous email
             document.getElementById('copyEmailBtn').classList.add('hidden');
+            document.getElementById('waitingSpinner').style.display = 'none'; // Hide spinner initially
     
             fetch(`https://api.kopeechka.store/mailbox-get-email?site=instagram.com&mail_type=${mailType}&token=492cca6f3d079f1b88c7b3eedb35347e`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
+                .then(response => response.json())
                 .then(data => {
-                    console.log('API Response:', data); // Debugging log to check response data
-                    if (data.status === 'OK' && data.mail) { // Check if the status is OK and mail is present
-                        const email = data.mail; // Correctly access the mail field
-                        requestId = data.id; // Store the request ID for the cancel function
-                        
-                        document.getElementById('emailDisplay').textContent = email; // Show the email
+                    console.log('API Response:', data);
+                    if (data.status === 'OK' && data.mail) {
+                        const email = data.mail;
+                        requestId = data.id;
+    
+                        document.getElementById('emailDisplay').textContent = email;
                         document.getElementById('copyEmailBtn').classList.remove('hidden');
+                        document.getElementById('waitingSpinner').style.display = 'block'; // Show spinner for waiting
+    
+                        checkInterval = setInterval(checkForCode, 15000); // Call every 15 seconds
                     } else {
                         alert('Email not found in the response. Please try again.');
                     }
     
-                    document.getElementById('loading').style.display = 'none'; // Hide loading text
+                    document.getElementById('loading').style.display = 'none';
                     document.getElementById('cancelBtn').classList.remove('hidden');
                 })
                 .catch(error => {
                     console.error('Error fetching email:', error);
-                    document.getElementById('loading').style.display = 'none'; // Hide loading text
+                    document.getElementById('loading').style.display = 'none';
                     alert('Failed to fetch the email. Please check the console for more details.');
                 });
+        }
+    
+        function checkForCode() {
+            fetch(`https://api.kopeechka.store/mailbox-get-message?id=${requestId}&token=492cca6f3d079f1b88c7b3eedb35347e&type=1`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'OK') {
+                        clearInterval(checkInterval); // Stop the interval
+    
+                        document.getElementById('waitingSpinner').style.display = 'none'; // Hide spinner
+                        document.getElementById('codeDisplay').textContent = data.value; // Show the code
+                        document.getElementById('copyCodeBtn').classList.remove('hidden');
+                    }
+                })
+                .catch(error => console.error('Error checking for code:', error));
         }
     
         document.getElementById('cancelBtn').addEventListener('click', function () {
@@ -152,6 +193,8 @@
                 .then(response => response.json())
                 .then(data => console.log('Request cancelled:', data))
                 .catch(error => console.error('Error cancelling request:', error));
+            clearInterval(checkInterval); // Stop checking for code when canceled
+            document.getElementById('waitingSpinner').style.display = 'none'; // Hide spinner on cancel
         });
     
         function copyToClipboard(elementId) {
@@ -161,6 +204,7 @@
                 .catch(err => console.error('Error copying to clipboard:', err));
         }
     </script>
+
 
 </body>
 </html>
