@@ -3,172 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Get Email</title>
+    <title>Email Fetcher</title>
     <style>
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: Arial, sans-serif;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
+            justify-content: center;
             min-height: 100vh;
             margin: 0;
-            background-color: #f4f4f4;
         }
-
-        .container {
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            text-align: center;
-            width: 90%;
-            max-width: 400px;
-        }
-
-        button {
-            background-color: #007bff;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            margin-top: 15px;
-            width: 100%;
-        }
-
-        button:hover {
-            background-color: #0056b3;
-        }
-
-        .copy-button {
-            background-color: #28a745;
-            color: white;
-            padding: 5px 10px;
-            border: none;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 12px;
-            margin-left: 10px;
-        }
-
-        .copy-button:hover {
-            background-color: #218838;
-        }
-
-        #spinner {
+        #loading {
             display: none;
-            margin: 10px auto;
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            border-left-color: #007bff;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        #waiting-text, #result {
-            display: none;
-            margin-top: 15px;
-            font-size: 16px;
-            color: #555;
-        }
-
-        #email, #result {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-            margin-top: 20px;
-            font-size: 18px;
-            color: #333;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <button onclick="getEmail()">GET EMAIL</button>
-        <div id="email"></div>
+    <!-- Dropdown for Email Provider -->
+    <label for="emailProvider">Choose your email provider:</label>
+    <select id="emailProvider">
+        <option value="gmail.com">Gmail</option>
+        <option value="mail.ru">Mail.ru</option>
+    </select>
 
-        <div id="spinner"></div>
-        <div id="waiting-text">Waiting for code...</div>
-        <button id="cancel-button" onclick="cancelRequest()" style="display:none;">CANCEL</button>
+    <!-- Button to Get Email -->
+    <button id="getEmailBtn">GET EMAIL</button>
 
-        <div id="result"></div>
+    <!-- Display Email -->
+    <div id="emailSection" style="margin-top: 10px;">
+        <p>Email: <span id="emailDisplay"></span></p>
+        <button id="copyEmailBtn" onclick="copyToClipboard('emailDisplay')" style="display: none;">Copy Email</button>
+        <p id="loading">🔄 Waiting for code...</p>
+        <button id="cancelBtn" style="display: none;">CANCEL</button>
     </div>
 
+    <!-- JavaScript to handle interactions -->
     <script>
-        let emailId;
-        let interval;
+        let requestId;
 
-        function getEmail() {
-            fetch('https://api.kopeechka.store/mailbox-get-email?site=instagram.com&mail_type=gmail.com&token=492cca6f3d079f1b88c7b3eedb35347e')
+        document.getElementById('getEmailBtn').addEventListener('click', function () {
+            const emailProvider = document.getElementById('emailProvider').value;
+            getEmail(emailProvider);
+        });
+
+        function getEmail(mailType) {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('cancelBtn').style.display = 'none';
+
+            fetch(`https://api.kopeechka.store/mailbox-get-email?site=instagram.com&mail_type=${mailType}&token=492cca6f3d079f1b88c7b3eedb35347e`)
                 .then(response => response.json())
                 .then(data => {
-                    if (data.status === "OK") {
-                        document.getElementById('email').innerHTML = `Email: ${data.mail} <button class="copy-button" onclick="copyToClipboard('${data.mail}')">Copy</button>`;
-                        emailId = data.id;
-
-                        document.getElementById('cancel-button').style.display = 'block';
-
-                        startPolling();
-                    } else {
-                        document.getElementById('email').innerText = "Failed to get email!";
-                    }
+                    const email = data.email;
+                    requestId = data.id; // Store the request ID for the cancel function
+                    document.getElementById('emailDisplay').textContent = email;
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('copyEmailBtn').style.display = 'inline';
+                    document.getElementById('cancelBtn').style.display = 'inline';
                 })
                 .catch(error => console.error('Error fetching email:', error));
         }
 
-        function startPolling() {
-            document.getElementById('spinner').style.display = 'block';
-            document.getElementById('waiting-text').style.display = 'block';
-            
-            interval = setInterval(() => {
-                fetch(`https://api.kopeechka.store/mailbox-get-message?id=${emailId}&token=492cca6f3d079f1b88c7b3eedb35347e&type=1`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === "OK") {
-                            clearInterval(interval);
-                            
-                            document.getElementById('spinner').style.display = 'none';
-                            document.getElementById('waiting-text').style.display = 'none';
-                            document.getElementById('cancel-button').style.display = 'none';  // Hide cancel button
-                            document.getElementById('result').innerHTML = `Code: ${data.value} <button class="copy-button" onclick="copyToClipboard('${data.value}')">Copy</button>`;
-                            document.getElementById('result').style.display = 'block';
-                        }
-                    })
-                    .catch(error => console.error('Error fetching code:', error));
-            }, 15000);
-        }
-
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                alert('Copied to clipboard!');
-            }).catch(err => {
-                console.error('Could not copy text: ', err);
-            });
-        }
-
-        function cancelRequest() {
-            clearInterval(interval);  // Stop the polling
-            fetch(`https://api.kopeechka.store/mailbox-cancel?id=${emailId}&token=492cca6f3d079f1b88c7b3eedb35347e`)
+        document.getElementById('cancelBtn').addEventListener('click', function () {
+            if (!requestId) return;
+            const url = `https://api.kopeechka.store/mailbox-cancel?id=${requestId}&token=492cca6f3d079f1b88c7b3eedb35347e`;
+            fetch(url)
                 .then(response => response.json())
-                .then(data => {
-                    if (data.status === "OK") {
-                        alert("Request canceled successfully.");
-                    } else {
-                        alert("Failed to cancel the request.");
-                    }
-
-                    document.getElementById('spinner').style.display = 'none';
-                    document.getElementById('waiting-text').style.display = 'none';
-                    document.getElementById('cancel-button').style.display = 'none';
-                })
+                .then(data => console.log('Request cancelled:', data))
                 .catch(error => console.error('Error cancelling request:', error));
+        });
+
+        function copyToClipboard(elementId) {
+            const text = document.getElementById(elementId).textContent;
+            navigator.clipboard.writeText(text)
+                .then(() => alert('Copied to clipboard!'))
+                .catch(err => console.error('Error copying to clipboard:', err));
         }
     </script>
 </body>
