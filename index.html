@@ -74,8 +74,8 @@
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
-                    if (data.success) {
-                        fetchedEmail = data.email;
+                    if (data.status === 'OK') {
+                        fetchedEmail = data.mail;
                         emailDisplay.textContent = fetchedEmail;
                         emailContainer.classList.remove('hidden');
                         fetchKopeechkaCode(data.id); // Use the email id to fetch the code
@@ -107,41 +107,11 @@
                 fetch(`https://api.kopeechka.store/mailbox-check?id=${id}&token=492cca6f3d079f1b88c7b3eedb35347e`)
                     .then(response => response.json())
                     .then(data => {
-                        if (data.success && data.value) {
+                        if (data.status === 'OK' && data.value) {
                             const emailBody = data.value;
                             const code = extractCodeFromBody(emailBody);
                             if (code) {
                                 codeDisplay.textContent = code;
                                 codeContainer.classList.remove('hidden');
                             }
-                        }
-                    })
-                    .catch(error => console.error('Error fetching Kopeechka code:', error));
-            }, 15000); // Query every 15 seconds
-        }
-
-        function fetchICloudMailCode(email) {
-            setInterval(() => {
-                fetch(`http://45.32.107.29:8888/api/check-inboxs?email=${email}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.data && data.data.length > 0) {
-                            const emailBody = data.data[0].body;
-                            const code = extractCodeFromBody(emailBody);
-                            if (code) {
-                                codeDisplay.textContent = code;
-                                codeContainer.classList.remove('hidden');
-                            }
-                        }
-                    })
-                    .catch(error => console.error('Error fetching iCloud code:', error));
-            }, 15000); // Query every 15 seconds
-        }
-
-        function extractCodeFromBody(body) {
-            const match = body.match(/confirmation code in the app:(\d{6})/);
-            return match ? match[1] : null;
-        }
-    </script>
-</body>
-</html>
+                  
