@@ -117,6 +117,7 @@
 
     <script>
         let email = "";
+        let emailId = ""; // For Kopeechka email ID
         let checkInboxInterval = null;
 
         function fetchEmail() {
@@ -152,10 +153,13 @@
                         email = data.email;
                         emailElement.innerHTML = `Fetched email: ${email}`;
                         copyButton.style.display = 'inline-block'; // Show Copy button
-                        checkInboxForCode(); // Start checking for code
+                        checkInboxForCode("icloud"); // Start checking for code
                     } else if (data.status === "OK") {
-                        emailElement.innerHTML = `Fetched email: ${data.mail}`;
+                        email = data.mail;
+                        emailId = data.id; // Capture the Kopeechka email ID
+                        emailElement.innerHTML = `Fetched email: ${email}`;
                         copyButton.style.display = 'inline-block'; // Show Copy button
+                        checkInboxForCode("kopeechka"); // Start checking for code
                     } else {
                         messageElement.innerHTML = "Error fetching email.";
                     }
@@ -167,24 +171,38 @@
                 });
         }
 
-        function checkInboxForCode() {
+        function checkInboxForCode(provider) {
             if (!email) return;
 
             const checkInbox = () => {
-                fetch(`https://private.temp-mailfree.com/api/check-inboxs?email=${email}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.data && data.data.length > 0) {
-                            const code = parseInstagramCode(data.data[0].body);
-                            if (code) {
-                                document.getElementById("confirmationCode").innerHTML = `Confirmation code: ${code}`;
+                if (provider === "icloud") {
+                    fetch(`https://private.temp-mailfree.com/api/check-inboxs?email=${email}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.data && data.data.length > 0) {
+                                const code = parseInstagramCode(data.data[0].body);
+                                if (code) {
+                                    document.getElementById("confirmationCode").innerHTML = `Confirmation code: ${code}`;
+                                    clearInterval(checkInboxInterval); // Stop checking inbox
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error checking iCloud inbox:', error);
+                        });
+                } else if (provider === "kopeechka") {
+                    fetch(`https://api.kopeechka.store/mailbox-get-message?id=${emailId}&token=492cca6f3d079f1b88c7b3eedb35347e&type=1`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.status === "OK" && data.value) {
+                                document.getElementById("confirmationCode").innerHTML = `Confirmation code: ${data.value}`;
                                 clearInterval(checkInboxInterval); // Stop checking inbox
                             }
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error checking inbox:', error);
-                    });
+                        })
+                        .catch(error => {
+                            console.error('Error checking Kopeechka inbox:', error);
+                        });
+                }
             };
 
             // Start polling the inbox every 15 seconds
