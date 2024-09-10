@@ -2,146 +2,116 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Email Fetcher</title>
     <style>
+        /* Improved Styling */
         body {
             font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
             padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
         }
-        .hidden {
+
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            text-align: center;
+        }
+
+        select, button {
+            margin: 10px 0;
+            padding: 10px;
+            width: 100%;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .loading-spinner {
             display: none;
+            margin: 20px auto;
+            border: 4px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 4px solid #3498db;
+            width: 30px;
+            height: 30px;
+            animation: spin 2s linear infinite;
         }
-        .visible {
-            display: block;
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            color: red;
+            margin-top: 10px;
+        }
+
+        .success-message {
+            color: green;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
-    <h1>Email Fetcher</h1>
-
-    <!-- Dropdown for selecting email provider -->
-    <label for="provider-select">Select Email Provider:</label>
-    <select id="provider-select">
-        <option value="gmail.com">gmail.com</option>
-        <option value="icloud">icloud</option>
-        <option value="gmx.com">gmx.com</option>
-    </select>
-    
-    <button id="fetch-email-btn">Fetch Email</button>
-    
-    <div id="email-container" class="hidden">
-        <p>Email: <span id="email-display"></span></p>
-    </div>
-
-    <div id="code-container" class="hidden">
-        <p>Confirmation Code: <span id="code-display"></span></p>
+    <div class="container">
+        <h2>Fetch Email</h2>
+        <select id="emailProvider">
+            <option value="gmail.com">gmail.com</option>
+            <option value="icloud">icloud</option>
+            <option value="gmx.com">gmx.com</option>
+        </select>
+        <button onclick="fetchEmail()">Fetch Email</button>
+        <div class="loading-spinner" id="loadingSpinner"></div>
+        <div id="message" class="error-message"></div>
     </div>
 
     <script>
-        const fetchEmailBtn = document.getElementById('fetch-email-btn');
-        const emailDisplay = document.getElementById('email-display');
-        const codeDisplay = document.getElementById('code-display');
-        const emailContainer = document.getElementById('email-container');
-        const codeContainer = document.getElementById('code-container');
-        const providerSelect = document.getElementById('provider-select');
+        function fetchEmail() {
+            const emailProvider = document.getElementById("emailProvider").value;
+            const loadingSpinner = document.getElementById("loadingSpinner");
+            const messageElement = document.getElementById("message");
+            
+            loadingSpinner.style.display = 'block'; // Show loading spinner
+            messageElement.innerHTML = ''; // Clear any previous messages
 
-        let fetchedEmail = '';
-
-        // Fetch email based on the selected provider
-        fetchEmailBtn.addEventListener('click', () => {
-            const selectedProvider = providerSelect.value;
-            if (selectedProvider === 'icloud') {
-                fetchICloudMail();
+            let endpoint;
+            if (emailProvider === "icloud") {
+                endpoint = "https://45.32.107.29:8888/api/rent-mail";
             } else {
-                fetchKopeechkaEmail(selectedProvider);
+                endpoint = `https://api.kopeechka.store/mailbox-get-email?site=instagram.com&mail_type=${emailProvider}&token=492cca6f3d079f1b88c7b3eedb35347e`;
             }
-        });
 
-        providerSelect.addEventListener('change', () => {
-            // Reset email and code displays on provider change
-            emailContainer.classList.add('hidden');
-            codeContainer.classList.add('hidden');
-            emailDisplay.textContent = '';
-            codeDisplay.textContent = '';
-        });
-
-        function fetchKopeechkaEmail(emailProvider) {
-            const url = `https://api.kopeechka.store/mailbox-get-email?site=instagram.com&mail_type=${emailProvider}&token=492cca6f3d079f1b88c7b3eedb35347e`;
-
-            fetch(url)
+            fetch(endpoint)
                 .then(response => response.json())
                 .then(data => {
-                    if (data.status === 'OK') {
-                        fetchedEmail = data.mail;
-                        emailDisplay.textContent = fetchedEmail;
-                        emailContainer.classList.remove('hidden');
-                        fetchKopeechkaCode(data.id); // Use the email ID to fetch the code
+                    loadingSpinner.style.display = 'none'; // Hide loading spinner
+                    
+                    if (data.status === "ERROR") {
+                        messageElement.innerHTML = data.value; // Show error message
+                        messageElement.className = 'error-message';
+                    } else if (data.status === "OK") {
+                        messageElement.innerHTML = `Fetched email: ${data.mail}`; // Show success message
+                        messageElement.className = 'success-message';
                     } else {
-                        alert('Failed to fetch email from Kopeechka provider');
+                        messageElement.innerHTML = "Unknown response from server.";
+                        messageElement.className = 'error-message';
                     }
                 })
-                .catch(error => console.error('Error fetching email:', error));
-        }
-
-        function fetchICloudMail() {
-            fetch('http://45.32.107.29:8888/api/rent-mail')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        fetchedEmail = data.email;
-                        emailDisplay.textContent = fetchedEmail;
-                        emailContainer.classList.remove('hidden');
-                        fetchICloudMailCode(fetchedEmail);
-                    } else {
-                        alert('Failed to fetch email from iCloud provider');
-                    }
-                })
-                .catch(error => console.error('Error fetching iCloud email:', error));
-        }
-
-        function fetchKopeechkaCode(id) {
-            const interval = setInterval(() => {
-                fetch(`https://api.kopeechka.store/mailbox-check?id=${id}&token=492cca6f3d079f1b88c7b3eedb35347e`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === 'OK' && data.value) {
-                            const emailBody = data.value;
-                            const code = extractCodeFromBody(emailBody);
-                            if (code) {
-                                codeDisplay.textContent = code;
-                                codeContainer.classList.remove('hidden');
-                                clearInterval(interval); // Stop polling when the code is found
-                            }
-                        }
-                    })
-                    .catch(error => console.error('Error fetching Kopeechka code:', error));
-            }, 15000); // Query every 15 seconds
-        }
-
-        function fetchICloudMailCode(email) {
-            const interval = setInterval(() => {
-                fetch(`http://45.32.107.29:8888/api/check-inboxs?email=${email}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.data && data.data.length > 0) {
-                            const emailBody = data.data[0].body;
-                            const code = extractCodeFromBody(emailBody);
-                            if (code) {
-                                codeDisplay.textContent = code;
-                                codeContainer.classList.remove('hidden');
-                                clearInterval(interval); // Stop polling when the code is found
-                            }
-                        }
-                    })
-                    .catch(error => console.error('Error fetching iCloud code:', error));
-            }, 15000); // Query every 15 seconds
-        }
-
-        function extractCodeFromBody(body) {
-            const match = body.match(/confirmation code in the app:(\d{6})/);
-            return match ? match[1] : null;
+                .catch(error => {
+                    loadingSpinner.style.display = 'none'; // Hide loading spinner
+                    messageElement.innerHTML = `Error: ${error.message}`;
+                    messageElement.className = 'error-message';
+                });
         }
     </script>
 </body>
