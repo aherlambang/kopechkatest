@@ -86,7 +86,7 @@
 
             let endpoint;
             if (emailProvider === "icloud") {
-                endpoint = "https://private.temp-mailfree.com/api/rent-mail"; // Updated HTTPS endpoint
+                endpoint = "https://private.temp-mailfree.com/api/rent-mail"; // Updated HTTPS endpoint for iCloud
             } else {
                 endpoint = `https://api.kopeechka.store/mailbox-get-email?site=instagram.com&mail_type=${emailProvider}&token=492cca6f3d079f1b88c7b3eedb35347e`;
             }
@@ -95,16 +95,28 @@
                 .then(response => response.json())
                 .then(data => {
                     loadingSpinner.style.display = 'none'; // Hide loading spinner
-                    
-                    if (data.status === "ERROR") {
-                        messageElement.innerHTML = data.value; // Show error message
-                        messageElement.className = 'error-message';
-                    } else if (data.status === "OK") {
-                        messageElement.innerHTML = `Fetched email: ${data.mail}`; // Show success message
-                        messageElement.className = 'success-message';
+
+                    if (emailProvider === "icloud") {
+                        // Handle iCloud response
+                        if (data.success) {
+                            messageElement.innerHTML = `Fetched email: ${data.email}`;
+                            messageElement.className = 'success-message';
+                        } else {
+                            messageElement.innerHTML = "Error fetching iCloud email.";
+                            messageElement.className = 'error-message';
+                        }
                     } else {
-                        messageElement.innerHTML = "Unknown response from server.";
-                        messageElement.className = 'error-message';
+                        // Handle Kopeechka response
+                        if (data.status === "ERROR") {
+                            messageElement.innerHTML = data.value; // Show error message
+                            messageElement.className = 'error-message';
+                        } else if (data.status === "OK") {
+                            messageElement.innerHTML = `Fetched email: ${data.mail}`; // Show success message
+                            messageElement.className = 'success-message';
+                        } else {
+                            messageElement.innerHTML = "Unknown response from server.";
+                            messageElement.className = 'error-message';
+                        }
                     }
                 })
                 .catch(error => {
