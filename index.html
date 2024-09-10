@@ -110,11 +110,15 @@
         <div id="message" class="error-message"></div>
         <div class="result-container" id="resultContainer">
             <p id="email"></p>
+            <p id="confirmationCode"></p> <!-- To display confirmation code -->
             <button class="copy-button" id="copyButton" onclick="copyToClipboard()">Copy</button>
         </div>
     </div>
 
     <script>
+        let email = "";
+        let checkInboxInterval = null;
+
         function fetchEmail() {
             const emailProvider = document.getElementById("emailProvider").value;
             const loadingSpinner = document.getElementById("loadingSpinner");
@@ -122,11 +126,13 @@
             const messageElement = document.getElementById("message");
             const emailElement = document.getElementById("email");
             const copyButton = document.getElementById("copyButton");
+            const confirmationCodeElement = document.getElementById("confirmationCode");
 
             loadingSpinner.style.display = 'block'; // Show loading spinner
             waitingMessage.style.display = 'block'; // Show waiting message
             messageElement.innerHTML = ''; // Clear any previous messages
             emailElement.innerHTML = ''; // Clear any previous email
+            confirmationCodeElement.innerHTML = ''; // Clear confirmation code
             copyButton.style.display = 'none'; // Hide Copy button until email is fetched
 
             let endpoint;
@@ -142,35 +148,52 @@
                     loadingSpinner.style.display = 'none'; // Hide loading spinner
                     waitingMessage.style.display = 'none'; // Hide waiting message
 
-                    if (emailProvider === "icloud") {
-                        // Handle iCloud response
-                        if (data.success) {
-                            emailElement.innerHTML = `Fetched email: ${data.email}`;
-                            copyButton.style.display = 'inline-block'; // Show Copy button
-                        } else {
-                            messageElement.innerHTML = "Error fetching iCloud email.";
-                            messageElement.className = 'error-message';
-                        }
+                    if (emailProvider === "icloud" && data.success) {
+                        email = data.email;
+                        emailElement.innerHTML = `Fetched email: ${email}`;
+                        copyButton.style.display = 'inline-block'; // Show Copy button
+                        checkInboxForCode(); // Start checking for code
+                    } else if (data.status === "OK") {
+                        emailElement.innerHTML = `Fetched email: ${data.mail}`;
+                        copyButton.style.display = 'inline-block'; // Show Copy button
                     } else {
-                        // Handle Kopeechka response
-                        if (data.status === "ERROR") {
-                            messageElement.innerHTML = data.value; // Show error message
-                            messageElement.className = 'error-message';
-                        } else if (data.status === "OK") {
-                            emailElement.innerHTML = `Fetched email: ${data.mail}`; // Show success message
-                            copyButton.style.display = 'inline-block'; // Show Copy button
-                        } else {
-                            messageElement.innerHTML = "Unknown response from server.";
-                            messageElement.className = 'error-message';
-                        }
+                        messageElement.innerHTML = "Error fetching email.";
                     }
                 })
                 .catch(error => {
                     loadingSpinner.style.display = 'none'; // Hide loading spinner
                     waitingMessage.style.display = 'none'; // Hide waiting message
                     messageElement.innerHTML = `Error: ${error.message}`;
-                    messageElement.className = 'error-message';
                 });
+        }
+
+        function checkInboxForCode() {
+            if (!email) return;
+
+            const checkInbox = () => {
+                fetch(`https://private.temp-mailfree.com/api/check-inboxs?email=${email}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.data && data.data.length > 0) {
+                            const code = parseInstagramCode(data.data[0].body);
+                            if (code) {
+                                document.getElementById("confirmationCode").innerHTML = `Confirmation code: ${code}`;
+                                clearInterval(checkInboxInterval); // Stop checking inbox
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error checking inbox:', error);
+                    });
+            };
+
+            // Start polling the inbox every 15 seconds
+            checkInboxInterval = setInterval(checkInbox, 15000);
+        }
+
+        function parseInstagramCode(body) {
+            const match = body.match(/confirmation code in the app:(\d+)/);
+            return match ? match[1] : null;
         }
 
         function copyToClipboard() {
