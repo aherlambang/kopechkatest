@@ -60,6 +60,13 @@
             100% { transform: rotate(360deg); }
         }
 
+        .waiting-message {
+            display: none; /* Hidden initially */
+            margin-top: 10px;
+            color: #3498db;
+            font-size: 14px;
+        }
+
         .error-message {
             color: red;
             margin-top: 10px;
@@ -99,6 +106,7 @@
         </select>
         <button onclick="fetchEmail()">Fetch Email</button>
         <div class="loading-spinner" id="loadingSpinner"></div> <!-- Spinner -->
+        <div class="waiting-message" id="waitingMessage">Waiting for code...</div> <!-- Waiting message -->
         <div id="message" class="error-message"></div>
         <div class="result-container" id="resultContainer">
             <p id="email"></p>
@@ -110,13 +118,16 @@
         function fetchEmail() {
             const emailProvider = document.getElementById("emailProvider").value;
             const loadingSpinner = document.getElementById("loadingSpinner");
+            const waitingMessage = document.getElementById("waitingMessage");
             const messageElement = document.getElementById("message");
             const emailElement = document.getElementById("email");
             const copyButton = document.getElementById("copyButton");
-            
+
             loadingSpinner.style.display = 'block'; // Show loading spinner
+            waitingMessage.style.display = 'block'; // Show waiting message
             messageElement.innerHTML = ''; // Clear any previous messages
             emailElement.innerHTML = ''; // Clear any previous email
+            copyButton.style.display = 'none'; // Hide Copy button until email is fetched
 
             let endpoint;
             if (emailProvider === "icloud") {
@@ -129,6 +140,7 @@
                 .then(response => response.json())
                 .then(data => {
                     loadingSpinner.style.display = 'none'; // Hide loading spinner
+                    waitingMessage.style.display = 'none'; // Hide waiting message
 
                     if (emailProvider === "icloud") {
                         // Handle iCloud response
@@ -155,6 +167,7 @@
                 })
                 .catch(error => {
                     loadingSpinner.style.display = 'none'; // Hide loading spinner
+                    waitingMessage.style.display = 'none'; // Hide waiting message
                     messageElement.innerHTML = `Error: ${error.message}`;
                     messageElement.className = 'error-message';
                 });
