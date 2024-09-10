@@ -204,4 +204,108 @@
                 .catch(error => {
                     loadingSpinner.style.display = 'none'; // Hide loading spinner
                     waitingMessage.style.display = 'none'; // Hide waiting message
-                    messageElement.innerHTML = `Error: ${error.me
+                    messageElement.innerHTML = `Error: ${error.message}`;
+                });
+        }
+
+        function showProgressBarAndCountdown() {
+            const progressBarContainer = document.getElementById("progressBarContainer");
+            const countdownElement = document.getElementById("countdown");
+            progressBarContainer.style.display = 'block'; // Show progress bar after email is fetched
+            countdownElement.style.display = 'block'; // Show countdown timer after email is fetched
+            startCountdown(); // Start countdown and progress bar animation
+        }
+
+        function checkInboxForCode(provider) {
+            if (!email) return;
+
+            const checkInbox = () => {
+                if (provider === "icloud") {
+                    fetch(`https://private.temp-mailfree.com/api/check-inboxs?email=${email}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.data && data.data.length > 0) {
+                                const code = parseInstagramCode(data.data[0].body);
+                                if (code) {
+                                    document.getElementById("confirmationCode").innerHTML = `Confirmation code: ${code}`;
+                                    document.getElementById("copyCodeButton").style.display = 'inline-block'; // Show Copy Code button
+                                    clearInterval(checkInboxInterval); // Stop checking inbox
+                                    clearInterval(countdownInterval); // Stop countdown
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error checking iCloud inbox:', error);
+                        });
+                } else if (provider === "kopeechka") {
+                    fetch(`https://api.kopeechka.store/mailbox-get-message?id=${emailId}&token=492cca6f3d079f1b88c7b3eedb35347e&type=1`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.status === "OK" && data.value) {
+                                document.getElementById("confirmationCode").innerHTML = `Confirmation code: ${data.value}`;
+                                document.getElementById("copyCodeButton").style.display = 'inline-block'; // Show Copy Code button
+                                clearInterval(checkInboxInterval); // Stop checking inbox
+                                clearInterval(countdownInterval); // Stop countdown
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error checking Kopeechka inbox:', error);
+                        });
+                }
+            };
+
+            // Start polling the inbox every 15 seconds
+            checkInboxInterval = setInterval(checkInbox, countdownTime * 1000);
+        }
+
+        function startCountdown() {
+            let timeLeft = countdownTime;
+            const countdownElement = document.getElementById("countdown");
+
+            clearInterval(countdownInterval); // Clear any previous intervals
+            countdownInterval = setInterval(() => {
+                countdownElement.innerHTML = `Next attempt in: ${timeLeft}s`;
+                timeLeft--;
+                if (timeLeft < 0) {
+                    timeLeft = countdownTime; // Reset countdown
+                }
+            }, 1000);
+        }
+
+        function parseInstagramCode(body) {
+            const match = body.match(/confirmation code in the app:(\d+)/);
+            return match ? match[1] : null;
+        }
+
+        function copyCodeToClipboard() {
+            const codeText = document.getElementById("confirmationCode").textContent;
+            if (codeText) {
+                navigator.clipboard.writeText(codeText.replace('Confirmation code: ', ''))
+                    .then(() => {
+                        alert('Code copied to clipboard!');
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy text: ', err);
+                    });
+            } else {
+                alert('No confirmation code to copy.');
+            }
+        }
+
+        function copyToClipboard() {
+            const emailText = document.getElementById("email").textContent;
+            if (emailText) {
+                navigator.clipboard.writeText(emailText.replace('Fetched email: ', ''))
+                    .then(() => {
+                        alert('Email copied to clipboard!');
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy text: ', err);
+                    });
+            } else {
+                alert('No email address to copy.');
+            }
+        }
+    </script>
+</body>
+</html>
