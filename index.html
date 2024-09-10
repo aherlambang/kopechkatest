@@ -35,8 +35,17 @@
             border-radius: 4px;
         }
 
+        button {
+            background-color: #3498db; /* New button color */
+            color: white;
+        }
+
+        button:hover {
+            background-color: #2980b9; /* Hover effect */
+        }
+
         .loading-spinner {
-            display: none;
+            display: none; /* Hidden initially */
             margin: 20px auto;
             border: 4px solid #f3f3f3;
             border-radius: 50%;
@@ -89,7 +98,7 @@
             <option value="gmx.com">gmx.com</option>
         </select>
         <button onclick="fetchEmail()">Fetch Email</button>
-        <div class="loading-spinner" id="loadingSpinner"></div>
+        <div class="loading-spinner" id="loadingSpinner"></div> <!-- Spinner -->
         <div id="message" class="error-message"></div>
         <div class="result-container" id="resultContainer">
             <p id="email"></p>
