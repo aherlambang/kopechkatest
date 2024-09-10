@@ -61,19 +61,40 @@
         }
 
         .waiting-message {
-            display: none; /* Hidden initially */
             margin-top: 10px;
             color: #3498db;
             font-size: 14px;
         }
 
-        .error-message {
-            color: red;
-            margin-top: 10px;
+        .progress-bar-container {
+            margin: 10px 0;
+            width: 100%;
+            height: 10px;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            overflow: hidden;
         }
 
-        .success-message {
-            color: green;
+        .progress-bar {
+            height: 100%;
+            width: 100%;
+            background-color: #3498db;
+            animation: progress 15s linear infinite;
+        }
+
+        @keyframes progress {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+
+        .countdown {
+            margin: 10px 0;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .error-message {
+            color: red;
             margin-top: 10px;
         }
 
@@ -106,12 +127,17 @@
         </select>
         <button onclick="fetchEmail()">Fetch Email</button>
         <div class="loading-spinner" id="loadingSpinner"></div> <!-- Spinner -->
-        <div class="waiting-message" id="waitingMessage">Waiting for code...</div> <!-- Waiting message -->
+        <div class="waiting-message" id="waitingMessage">Waiting for code...</div>
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progressBar"></div> <!-- Progress bar -->
+        </div>
+        <div class="countdown" id="countdown">Next attempt in: 15s</div> <!-- Countdown Timer -->
         <div id="message" class="error-message"></div>
         <div class="result-container" id="resultContainer">
             <p id="email"></p>
             <p id="confirmationCode"></p> <!-- To display confirmation code -->
-            <button class="copy-button" id="copyButton" onclick="copyToClipboard()">Copy</button>
+            <button class="copy-button" id="copyCodeButton" onclick="copyCodeToClipboard()" style="display: none;">Copy Code</button> <!-- Copy Code Button -->
+            <button class="copy-button" id="copyButton" onclick="copyToClipboard()">Copy Email</button>
         </div>
     </div>
 
@@ -119,6 +145,8 @@
         let email = "";
         let emailId = ""; // For Kopeechka email ID
         let checkInboxInterval = null;
+        let countdownInterval = null;
+        const countdownTime = 15;
 
         function fetchEmail() {
             const emailProvider = document.getElementById("emailProvider").value;
@@ -127,7 +155,9 @@
             const messageElement = document.getElementById("message");
             const emailElement = document.getElementById("email");
             const copyButton = document.getElementById("copyButton");
+            const copyCodeButton = document.getElementById("copyCodeButton");
             const confirmationCodeElement = document.getElementById("confirmationCode");
+            const progressBar = document.getElementById("progressBar");
 
             loadingSpinner.style.display = 'block'; // Show loading spinner
             waitingMessage.style.display = 'block'; // Show waiting message
@@ -135,6 +165,8 @@
             emailElement.innerHTML = ''; // Clear any previous email
             confirmationCodeElement.innerHTML = ''; // Clear confirmation code
             copyButton.style.display = 'none'; // Hide Copy button until email is fetched
+            copyCodeButton.style.display = 'none'; // Hide Copy Code button
+            progressBar.style.animation = 'progress 15s linear infinite'; // Start progress bar animation
 
             let endpoint;
             if (emailProvider === "icloud") {
@@ -147,18 +179,18 @@
                 .then(response => response.json())
                 .then(data => {
                     loadingSpinner.style.display = 'none'; // Hide loading spinner
-                    waitingMessage.style.display = 'none'; // Hide waiting message
-
                     if (emailProvider === "icloud" && data.success) {
                         email = data.email;
                         emailElement.innerHTML = `Fetched email: ${email}`;
                         copyButton.style.display = 'inline-block'; // Show Copy button
+                        startCountdown();
                         checkInboxForCode("icloud"); // Start checking for code
                     } else if (data.status === "OK") {
                         email = data.mail;
                         emailId = data.id; // Capture the Kopeechka email ID
                         emailElement.innerHTML = `Fetched email: ${email}`;
                         copyButton.style.display = 'inline-block'; // Show Copy button
+                        startCountdown();
                         checkInboxForCode("kopeechka"); // Start checking for code
                     } else {
                         messageElement.innerHTML = "Error fetching email.";
@@ -183,7 +215,9 @@
                                 const code = parseInstagramCode(data.data[0].body);
                                 if (code) {
                                     document.getElementById("confirmationCode").innerHTML = `Confirmation code: ${code}`;
+                                    document.getElementById("copyCodeButton").style.display = 'inline-block'; // Show Copy Code button
                                     clearInterval(checkInboxInterval); // Stop checking inbox
+                                    clearInterval(countdownInterval); // Stop countdown
                                 }
                             }
                         })
@@ -196,7 +230,9 @@
                         .then(data => {
                             if (data.status === "OK" && data.value) {
                                 document.getElementById("confirmationCode").innerHTML = `Confirmation code: ${data.value}`;
+                                document.getElementById("copyCodeButton").style.display = 'inline-block'; // Show Copy Code button
                                 clearInterval(checkInboxInterval); // Stop checking inbox
+                                clearInterval(countdownInterval); // Stop countdown
                             }
                         })
                         .catch(error => {
@@ -206,12 +242,41 @@
             };
 
             // Start polling the inbox every 15 seconds
-            checkInboxInterval = setInterval(checkInbox, 15000);
+            checkInboxInterval = setInterval(checkInbox, countdownTime * 1000);
+        }
+
+        function startCountdown() {
+            let timeLeft = countdownTime;
+            const countdownElement = document.getElementById("countdown");
+
+            clearInterval(countdownInterval); // Clear any previous intervals
+            countdownInterval = setInterval(() => {
+                countdownElement.innerHTML = `Next attempt in: ${timeLeft}s`;
+                timeLeft--;
+                if (timeLeft < 0) {
+                    timeLeft = countdownTime; // Reset countdown
+                }
+            }, 1000);
         }
 
         function parseInstagramCode(body) {
             const match = body.match(/confirmation code in the app:(\d+)/);
             return match ? match[1] : null;
+        }
+
+        function copyCodeToClipboard() {
+            const codeText = document.getElementById("confirmationCode").textContent;
+            if (codeText) {
+                navigator.clipboard.writeText(codeText.replace('Confirmation code: ', ''))
+                    .then(() => {
+                        alert('Code copied to clipboard!');
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy text: ', err);
+                    });
+            } else {
+                alert('No confirmation code to copy.');
+            }
         }
 
         function copyToClipboard() {
