@@ -174,8 +174,10 @@
             copyCodeButton.style.display = 'none'; // Hide Copy Code button
 
             let endpoint;
-            if (emailProvider === "icloud") {
-                endpoint = "https://private.temp-mailfree.com/api/rent-mail"; // Updated HTTPS endpoint for iCloud
+            if (emailProvider === "gmail.com") {
+                endpoint = "https://rentgmail.online/prod/mail/order/rentMail?mailTypeCode=gmail&platform=instagram&token=eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhaGVybGFtYmFuZyIsInV1aWQiOiJhbHdheXMtNjUzIiwidXNlcmlkIjoiNjUzIn0.gHqNRBOJQa2agrAXBkbGDE-ibQW6vpUDbm9d3RtQ8L3kDu1ph8tHTD0ufMZgp8ks10G4PeNH82mh0fqgZW9yBQ";
+            } else if (emailProvider === "icloud") {
+                endpoint = "https://private.temp-mailfree.com/api/rent-mail"; // iCloud API endpoint
             } else {
                 endpoint = `https://api.kopeechka.store/mailbox-get-email?site=instagram.com&mail_type=${emailProvider}&token=492cca6f3d079f1b88c7b3eedb35347e`;
             }
@@ -184,19 +186,26 @@
                 .then(response => response.json())
                 .then(data => {
                     loadingSpinner.style.display = 'none'; // Hide loading spinner
-                    if (emailProvider === "icloud" && data.success) {
+                    if (emailProvider === "gmail.com" && data.code === 200) {
+                        email = data.data.email;
+                        const orderId = data.data.orderId; // Save the order ID
+                        emailElement.innerHTML = `${email}`; // Show email directly
+                        copyButton.style.display = 'inline-block'; // Show Copy button
+                        showProgressBarAndCountdown(); // Start progress bar and countdown after fetching email
+                        checkInboxForCode("gmail", orderId); // Start checking for OTP using orderId
+                    } else if (emailProvider === "icloud" && data.success) {
                         email = data.email;
                         emailElement.innerHTML = `${email}`; // Show email directly
                         copyButton.style.display = 'inline-block'; // Show Copy button
                         showProgressBarAndCountdown(); // Start progress bar and countdown after fetching email
-                        checkInboxForCode("icloud"); // Start checking for code
+                        checkInboxForCode("icloud"); // Start checking for code for iCloud
                     } else if (data.status === "OK") {
                         email = data.mail;
                         emailId = data.id; // Capture the Kopeechka email ID
                         emailElement.innerHTML = `${email}`; // Show email directly
                         copyButton.style.display = 'inline-block'; // Show Copy button
                         showProgressBarAndCountdown(); // Start progress bar and countdown after fetching email
-                        checkInboxForCode("kopeechka"); // Start checking for code
+                        checkInboxForCode("kopeechka"); // Start checking for code for Kopeechka
                     } else {
                         messageElement.innerHTML = "Error fetching email.";
                     }
@@ -208,6 +217,7 @@
                 });
         }
 
+
         function showProgressBarAndCountdown() {
             const progressBarContainer = document.getElementById("progressBarContainer");
             const progressBar = document.getElementById("progressBar");
@@ -217,15 +227,27 @@
             startCountdown(); // Start countdown and progress bar synchronization
         }
 
-               function checkInboxForCode(provider) {
+        function checkInboxForCode(provider, orderId) {
             if (!email) return;
 
             const checkInbox = () => {
-                if (provider === "icloud") {
+                if (provider === "gmail") {
+                    fetch(`https://rentgmail.online/prod/mail/order/mailOtp?orderId=${orderId}&token=eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhaGVybGFtYmFuZyIsInV1aWQiOiJhbHdheXMtNjUzIiwidXNlcmlkIjoiNjUzIn0.gHqNRBOJQa2agrAXBkbGDE-ibQW6vpUDbm9d3RtQ8L3kDu1ph8tHTD0ufMZgp8ks10G4PeNH82mh0fqgZW9yBQ`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.code === 200 && data.data.otp) {
+                                document.getElementById("confirmationCode").innerHTML = `<span class="bold">${data.data.otp}</span>`;
+                                document.getElementById("copyCodeButton").style.display = 'inline-block'; // Show Copy Code button
+                                stopProgressBarAndPolling(); // Stop polling and progress bar when code is fetched
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error checking Gmail inbox:', error);
+                        });
+                } else if (provider === "icloud") {
                     fetch(`https://private.temp-mailfree.com/api/check-inboxs?email=${email}`)
                         .then(response => response.json())
                         .then(data => {
-                            console.log(data); // Log response for debugging
                             if (data.data && data.data.length > 0) {
                                 const code = parseInstagramCode(data.data[0].body);
                                 if (code) {
@@ -242,7 +264,6 @@
                     fetch(`https://api.kopeechka.store/mailbox-get-message?id=${emailId}&token=492cca6f3d079f1b88c7b3eedb35347e&type=1`)
                         .then(response => response.json())
                         .then(data => {
-                            console.log(data); // Log response for debugging
                             if (data.status === "OK" && data.value) {
                                 document.getElementById("confirmationCode").innerHTML = `<span class="bold">${data.value}</span>`;
                                 document.getElementById("copyCodeButton").style.display = 'inline-block'; // Show Copy Code button
@@ -258,6 +279,7 @@
             // Start polling the inbox every 5 seconds
             checkInboxInterval = setInterval(checkInbox, countdownTime * 1000);
         }
+
 
         function stopProgressBarAndPolling() {
             clearInterval(checkInboxInterval); // Stop polling the inbox
