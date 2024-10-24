@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Email Fetcher</title>
     <style>
-        /* Improved Styling */
+        /* Existing styles */
         body {
             font-family: Arial, sans-serif;
             background-color: #f0f0f0;
@@ -22,22 +22,25 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            width: 300px;
+            width: 100%;
+            max-width: 400px; /* Limit width for better mobile experience */
             text-align: center;
         }
 
-        select, button {
+        select, button, input {
             margin: 10px 0;
             padding: 10px;
             width: 100%;
             font-size: 16px;
             border: 1px solid #ddd;
             border-radius: 4px;
+            box-sizing: border-box;
         }
 
         button {
             background-color: #3498db;
             color: white;
+            cursor: pointer;
         }
 
         button:hover {
@@ -60,268 +63,97 @@
             100% { transform: rotate(360deg); }
         }
 
-        .waiting-message {
-            display: none;
-            margin-top: 10px;
-            color: #3498db;
-            font-size: 14px;
+        .twofa-container {
+            margin-top: 30px;
+            padding: 20px;
+            border-top: 1px solid #ddd;
         }
 
-        .progress-bar-container {
-            display: none; /* Hidden initially */
-            margin: 10px 0;
-            width: 100%;
-            height: 10px;
-            background-color: #e0e0e0;
-            border-radius: 5px;
-            overflow: hidden;
-        }
-
-        .progress-bar {
-            height: 100%;
-            width: 0;
-            background-color: #3498db;
-        }
-
-        .countdown {
-            display: none;
-            margin: 10px 0;
-            font-size: 16px;
-            color: #333;
-        }
-
-        .error-message {
-            color: red;
-            margin-top: 10px;
-        }
-
-        .result-container {
-            margin-top: 20px;
-        }
-
-        .copy-button {
-            margin-top: 10px;
-            padding: 10px;
-            background-color: #3498db;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .copy-button:hover {
-            background-color: #2980b9;
-        }
-
-        .bold {
+        .twofa-title {
+            font-size: 18px;
+            margin-bottom: 10px;
             font-weight: bold;
+        }
+
+        .twofa-input {
+            padding: 10px;
+            font-size: 16px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .twofa-code {
+            font-size: 24px;
+            font-weight: bold;
+            color: #3498db;
+            margin-top: 10px;
+            word-wrap: break-word;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                padding: 15px;
+            }
+
+            .twofa-code {
+                font-size: 20px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- Existing content -->
         <h2>Fetch Email</h2>
-        <select id="emailProvider">
-            <option value="gmail.com">gmail.com</option>
-            <option value="icloud">icloud</option>
-            <option value="gmx.com">gmx.com</option>
-            <option value="hotmail.com">hotmail.com</option>
-        </select>
-        <button onclick="fetchEmail()">Fetch Email</button>
-        <div class="loading-spinner" id="loadingSpinner"></div> <!-- Spinner -->
-        <div class="waiting-message" id="waitingMessage">Waiting for code...</div>
-        <div class="progress-bar-container" id="progressBarContainer">
-            <div class="progress-bar" id="progressBar"></div> <!-- Progress bar -->
-        </div>
-        <div class="countdown" id="countdown">Next attempt in: 5s</div> <!-- Countdown Timer -->
-        <div id="message" class="error-message"></div>
-        <div class="result-container" id="resultContainer">
-            <p id="email"></p> <!-- Email is shown directly, no label -->
-            <p id="confirmationCode"></p> <!-- To display confirmation code -->
-            <button class="copy-button" id="copyCodeButton" onclick="copyCodeToClipboard()" style="display: none;">Copy Code</button> <!-- Copy Code Button -->
-            <button class="copy-button" id="copyButton" onclick="copyToClipboard()" style="display: none;">Copy Email</button> <!-- Initially hidden -->
+        <!-- Add your existing HTML structure here -->
+
+        <!-- 2FA Generator Section -->
+        <div class="twofa-container">
+            <h3 class="twofa-title">2FA Code Generator</h3>
+            <input type="text" id="twofaKey" class="twofa-input" placeholder="Enter your 2FA key" />
+            <div id="twofaCode" class="twofa-code">Waiting for key...</div>
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/js-otp/dist/otp.min.js"></script>
     <script>
-        let email = "";
-        let emailId = ""; // For Kopeechka email ID
-        let checkInboxInterval = null;
-        let countdownInterval = null;
-        const countdownTime = 5; // 5-second interval for fetching
+        // Function to generate and update the 2FA code
+        function update2FACode() {
+            const key = document.getElementById("twofaKey").value.trim();
+            const twofaCodeElement = document.getElementById("twofaCode");
 
-        function fetchEmail() {
-            const emailProvider = document.getElementById("emailProvider").value;
-            const loadingSpinner = document.getElementById("loadingSpinner");
-            const waitingMessage = document.getElementById("waitingMessage");
-            const progressBarContainer = document.getElementById("progressBarContainer");
-            const progressBar = document.getElementById("progressBar");
-            const countdownElement = document.getElementById("countdown");
-            const messageElement = document.getElementById("message");
-            const emailElement = document.getElementById("email");
-            const copyButton = document.getElementById("copyButton");
-            const copyCodeButton = document.getElementById("copyCodeButton");
-            const confirmationCodeElement = document.getElementById("confirmationCode");
+            if (key) {
+                try {
+                    const otp = new OTPAuth.TOTP({
+                        secret: OTPAuth.Secret.fromB32(key),
+                        algorithm: 'SHA-1',
+                        digits: 6,
+                        period: 30,
+                    });
+                    const code = otp.generate();
+                    twofaCodeElement.textContent = code;
 
-            loadingSpinner.style.display = 'block'; // Show loading spinner
-            waitingMessage.style.display = 'none'; // Hide waiting message until email is fetched
-            progressBarContainer.style.display = 'none'; // Hide progress bar until email is fetched
-            countdownElement.style.display = 'none'; // Hide countdown until email is fetched
-            messageElement.innerHTML = ''; // Clear any previous messages
-            emailElement.innerHTML = ''; // Clear any previous email
-            confirmationCodeElement.innerHTML = ''; // Clear confirmation code
-            copyButton.style.display = 'none'; // Hide Copy button until email is fetched
-            copyCodeButton.style.display = 'none'; // Hide Copy Code button
-
-            let endpoint;
-            if (emailProvider === "gmail.com") {
-                endpoint = "https://rentgmail.online/prod/mail/order/rentMail?mailTypeCode=gmail&platform=instagram&token=eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhaGVybGFtYmFuZyIsInV1aWQiOiJhbHdheXMtNjUzIiwidXNlcmlkIjoiNjUzIn0.gHqNRBOJQa2agrAXBkbGDE-ibQW6vpUDbm9d3RtQ8L3kDu1ph8tHTD0ufMZgp8ks10G4PeNH82mh0fqgZW9yBQ";
-            } else if (emailProvider === "icloud") {
-                endpoint = "https://private.temp-mailfree.com/api/rent-mail"; // iCloud API endpoint
+                    // Update the code every 30 seconds when it changes
+                    setTimeout(update2FACode, (30 - (Math.floor(Date.now() / 1000) % 30)) * 1000);
+                } catch (e) {
+                    twofaCodeElement.textContent = "Invalid 2FA key.";
+                }
             } else {
-                endpoint = `https://api.kopeechka.store/mailbox-get-email?site=instagram.com&mail_type=${emailProvider}&token=492cca6f3d079f1b88c7b3eedb35347e`;
-            }
-
-            fetch(endpoint)
-                .then(response => response.json())
-                .then(data => {
-                    loadingSpinner.style.display = 'none'; // Hide loading spinner
-                    if (emailProvider === "gmail.com" && data.code === 200) {
-                        email = data.data.email;
-                        const orderId = data.data.orderId; // Save the order ID
-                        emailElement.innerHTML = `${email}`; // Show email directly
-                        copyButton.style.display = 'inline-block'; // Show Copy button
-                        showProgressBarAndCountdown(); // Start progress bar and countdown after fetching email
-                        checkInboxForCode("gmail", orderId); // Start checking for OTP using orderId
-                    } else if (emailProvider === "icloud" && data.success) {
-                        email = data.email;
-                        emailElement.innerHTML = `${email}`; // Show email directly
-                        copyButton.style.display = 'inline-block'; // Show Copy button
-                        showProgressBarAndCountdown(); // Start progress bar and countdown after fetching email
-                        checkInboxForCode("icloud"); // Start checking for code for iCloud
-                    } else if (data.status === "OK") {
-                        email = data.mail;
-                        emailId = data.id; // Capture the Kopeechka email ID
-                        emailElement.innerHTML = `${email}`; // Show email directly
-                        copyButton.style.display = 'inline-block'; // Show Copy button
-                        showProgressBarAndCountdown(); // Start progress bar and countdown after fetching email
-                        checkInboxForCode("kopeechka"); // Start checking for code for Kopeechka
-                    } else {
-                        messageElement.innerHTML = "Error fetching email.";
-                    }
-                })
-                .catch(error => {
-                    loadingSpinner.style.display = 'none'; // Hide loading spinner
-                    waitingMessage.style.display = 'none'; // Hide waiting message
-                    messageElement.innerHTML = `Error: ${error.message}`;
-                });
-        }
-
-
-        function showProgressBarAndCountdown() {
-            const progressBarContainer = document.getElementById("progressBarContainer");
-            const progressBar = document.getElementById("progressBar");
-            const countdownElement = document.getElementById("countdown");
-            progressBarContainer.style.display = 'block'; // Show progress bar after email is fetched
-            countdownElement.style.display = 'block'; // Show countdown timer after email is fetched
-            startCountdown(); // Start countdown and progress bar synchronization
-        }
-
-        function checkInboxForCode(provider, orderId) {
-            if (!email) return;
-
-            const checkInbox = () => {
-                if (provider === "gmail") {
-                    fetch(`https://rentgmail.online/prod/mail/order/mailOtp?orderId=${orderId}&token=eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhaGVybGFtYmFuZyIsInV1aWQiOiJhbHdheXMtNjUzIiwidXNlcmlkIjoiNjUzIn0.gHqNRBOJQa2agrAXBkbGDE-ibQW6vpUDbm9d3RtQ8L3kDu1ph8tHTD0ufMZgp8ks10G4PeNH82mh0fqgZW9yBQ`)
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.code === 200 && data.data.otp) {
-                                document.getElementById("confirmationCode").innerHTML = `<span class="bold">${data.data.otp}</span>`;
-                                document.getElementById("copyCodeButton").style.display = 'inline-block'; // Show Copy Code button
-                                stopProgressBarAndPolling(); // Stop polling and progress bar when code is fetched
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error checking Gmail inbox:', error);
-                        });
-                } else if (provider === "icloud") {
-                    fetch(`https://private.temp-mailfree.com/api/check-inboxs?email=${email}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.data && data.data.length > 0) {
-                                const code = parseInstagramCode(data.data[0].body);
-                                if (code) {
-                                    document.getElementById("confirmationCode").innerHTML = `<span class="bold">${code}</span>`;
-                                    document.getElementById("copyCodeButton").style.display = 'inline-block'; // Show Copy Code button
-                                    stopProgressBarAndPolling(); // Stop polling and progress bar when code is fetched
-                                }
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error checking iCloud inbox:', error);
-                        });
-                } else if (provider === "kopeechka") {
-                    fetch(`https://api.kopeechka.store/mailbox-get-message?id=${emailId}&token=492cca6f3d079f1b88c7b3eedb35347e&type=1`)
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.status === "OK" && data.value) {
-                                document.getElementById("confirmationCode").innerHTML = `<span class="bold">${data.value}</span>`;
-                                document.getElementById("copyCodeButton").style.display = 'inline-block'; // Show Copy Code button
-                                stopProgressBarAndPolling(); // Stop polling and progress bar when code is fetched
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error checking Kopeechka inbox:', error);
-                        });
-                }
-            };
-
-            // Start polling the inbox every 5 seconds
-            checkInboxInterval = setInterval(checkInbox, countdownTime * 1000);
-        }
-
-
-        function stopProgressBarAndPolling() {
-            clearInterval(checkInboxInterval); // Stop polling the inbox
-            clearInterval(countdownInterval); // Stop the countdown
-            document.getElementById("progressBarContainer").style.display = 'none'; // Hide progress bar
-            document.getElementById("countdown").style.display = 'none'; // Hide countdown
-        }
-
-        function startCountdown() {
-            let timeLeft = countdownTime;
-            const countdownElement = document.getElementById("countdown");
-            const progressBar = document.getElementById("progressBar");
-
-            clearInterval(countdownInterval); // Clear any previous intervals
-            countdownInterval = setInterval(() => {
-                countdownElement.innerHTML = `Next attempt in: ${timeLeft}s`;
-                progressBar.style.width = `${(timeLeft / countdownTime) * 100}%`; // Sync progress bar with time
-                timeLeft--;
-                if (timeLeft < 0) {
-                    timeLeft = countdownTime; // Reset countdown
-                }
-            }, 1000);
-        }
-
-        function parseInstagramCode(body) {
-            const match = body.match(/confirmation code in the app:(\d+)/);
-            return match ? match[1] : null;
-        }
-
-        function copyCodeToClipboard() {
-            const codeText = document.getElementById("confirmationCode").textContent;
-            if (codeText) {
-                navigator.clipboard.writeText(codeText.replace('Confirmation code: ', ''));
+                twofaCodeElement.textContent = "Waiting for key...";
             }
         }
 
-        function copyToClipboard() {
-            const emailText = document.getElementById("email").textContent;
-            if (emailText) {
-                navigator.clipboard.writeText(emailText);
-            }
-        }
+        // Attach event listener to update the code when the key changes
+        document.getElementById("twofaKey").addEventListener("input", update2FACode);
+
+        // Initial call to display the code if a key is present
+        update2FACode();
     </script>
 </body>
 </html>
