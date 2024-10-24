@@ -116,6 +116,50 @@
         .bold {
             font-weight: bold;
         }
+
+        .twofa-container {
+            margin-top: 30px;
+            padding: 20px;
+            border-top: 1px solid #ddd;
+        }
+
+        .twofa-title {
+            font-size: 18px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .twofa-input {
+            padding: 10px;
+            font-size: 16px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .twofa-code {
+            font-size: 24px;
+            font-weight: bold;
+            color: #3498db;
+            margin-top: 10px;
+            word-wrap: break-word;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                padding: 15px;
+            }
+
+            .twofa-code {
+                font-size: 20px;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -141,6 +185,13 @@
             <button class="copy-button" id="copyCodeButton" onclick="copyCodeToClipboard()" style="display: none;">Copy Code</button> <!-- Copy Code Button -->
             <button class="copy-button" id="copyButton" onclick="copyToClipboard()" style="display: none;">Copy Email</button> <!-- Initially hidden -->
         </div>
+    </div>
+
+    <!-- 2FA Generator Section -->
+    <div class="container">
+        <h3 class="twofa-title">2FA Code Generator</h3>
+        <input type="text" id="twofaKey" class="twofa-input" placeholder="Enter your 2FA key" />
+        <div id="twofaCode" class="twofa-code">Waiting for key...</div>
     </div>
 
     <script>
@@ -322,6 +373,39 @@
                 navigator.clipboard.writeText(emailText);
             }
         }
+
+         // Function to generate and update the 2FA code
+        function update2FACode() {
+            const key = document.getElementById("twofaKey").value.trim();
+            const twofaCodeElement = document.getElementById("twofaCode");
+
+            if (key) {
+                try {
+                    const otp = new OTPAuth.TOTP({
+                        secret: OTPAuth.Secret.fromB32(key),
+                        algorithm: 'SHA-1',
+                        digits: 6,
+                        period: 30,
+                    });
+                    const code = otp.generate();
+                    twofaCodeElement.textContent = code;
+
+                    // Update the code every 30 seconds when it changes
+                    setTimeout(update2FACode, (30 - (Math.floor(Date.now() / 1000) % 30)) * 1000);
+                } catch (e) {
+                    twofaCodeElement.textContent = "Invalid 2FA key.";
+                }
+            } else {
+                twofaCodeElement.textContent = "Waiting for key...";
+            }
+        }
+
+        // Attach event listener to update the code when the key changes
+        document.getElementById("twofaKey").addEventListener("input", update2FACode);
+
+        // Initial call to display the code if a key is present
+        update2FACode();
+        
     </script>
 </body>
 </html>
