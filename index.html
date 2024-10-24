@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Email Fetcher</title>
     <style>
+        /* Improved Styling */
         body {
             font-family: Arial, sans-serif;
             background-color: #f0f0f0;
@@ -13,8 +14,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            flex-direction: column;
+            height: 100vh;
         }
 
         .container {
@@ -22,26 +22,22 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 400px;
+            width: 300px;
             text-align: center;
-            margin-bottom: 20px;
         }
 
-        select, button, input {
+        select, button {
             margin: 10px 0;
             padding: 10px;
             width: 100%;
             font-size: 16px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            box-sizing: border-box;
         }
 
         button {
             background-color: #3498db;
             color: white;
-            cursor: pointer;
         }
 
         button:hover {
@@ -49,7 +45,7 @@
         }
 
         .loading-spinner {
-            display: none;
+            display: none; /* Hidden initially */
             margin: 20px auto;
             border: 4px solid #f3f3f3;
             border-radius: 50%;
@@ -64,47 +60,61 @@
             100% { transform: rotate(360deg); }
         }
 
-        .twofa-container {
-            margin-top: 30px;
-            padding: 20px;
-            border-top: 1px solid #ddd;
-        }
-
-        .twofa-title {
-            font-size: 18px;
-            margin-bottom: 10px;
-            font-weight: bold;
-        }
-
-        .twofa-input {
-            padding: 10px;
-            font-size: 16px;
-            margin-bottom: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-
-        .twofa-code {
-            font-size: 24px;
-            font-weight: bold;
-            color: #3498db;
+        .waiting-message {
+            display: none;
             margin-top: 10px;
-            word-wrap: break-word;
+            color: #3498db;
+            font-size: 14px;
         }
 
-        @media (max-width: 600px) {
-            body {
-                padding: 10px;
-            }
+        .progress-bar-container {
+            display: none; /* Hidden initially */
+            margin: 10px 0;
+            width: 100%;
+            height: 10px;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            overflow: hidden;
+        }
 
-            .container {
-                padding: 15px;
-            }
+        .progress-bar {
+            height: 100%;
+            width: 0;
+            background-color: #3498db;
+        }
 
-            .twofa-code {
-                font-size: 20px;
-            }
+        .countdown {
+            display: none;
+            margin: 10px 0;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .error-message {
+            color: red;
+            margin-top: 10px;
+        }
+
+        .result-container {
+            margin-top: 20px;
+        }
+
+        .copy-button {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .copy-button:hover {
+            background-color: #2980b9;
+        }
+
+        .bold {
+            font-weight: bold;
         }
     </style>
 </head>
@@ -118,34 +128,27 @@
             <option value="hotmail.com">hotmail.com</option>
         </select>
         <button onclick="fetchEmail()">Fetch Email</button>
-        <div class="loading-spinner" id="loadingSpinner"></div>
+        <div class="loading-spinner" id="loadingSpinner"></div> <!-- Spinner -->
         <div class="waiting-message" id="waitingMessage">Waiting for code...</div>
         <div class="progress-bar-container" id="progressBarContainer">
-            <div class="progress-bar" id="progressBar"></div>
+            <div class="progress-bar" id="progressBar"></div> <!-- Progress bar -->
         </div>
-        <div class="countdown" id="countdown">Next attempt in: 5s</div>
+        <div class="countdown" id="countdown">Next attempt in: 5s</div> <!-- Countdown Timer -->
         <div id="message" class="error-message"></div>
         <div class="result-container" id="resultContainer">
-            <p id="email"></p>
-            <p id="confirmationCode"></p>
-            <button class="copy-button" id="copyCodeButton" onclick="copyCodeToClipboard()" style="display: none;">Copy Code</button>
-            <button class="copy-button" id="copyButton" onclick="copyToClipboard()" style="display: none;">Copy Email</button>
+            <p id="email"></p> <!-- Email is shown directly, no label -->
+            <p id="confirmationCode"></p> <!-- To display confirmation code -->
+            <button class="copy-button" id="copyCodeButton" onclick="copyCodeToClipboard()" style="display: none;">Copy Code</button> <!-- Copy Code Button -->
+            <button class="copy-button" id="copyButton" onclick="copyToClipboard()" style="display: none;">Copy Email</button> <!-- Initially hidden -->
         </div>
     </div>
 
-    <div class="container">
-        <h3 class="twofa-title">2FA Code Generator</h3>
-        <input type="text" id="twofaKey" class="twofa-input" placeholder="Enter your 2FA key" />
-        <div id="twofaCode" class="twofa-code">Waiting for key...</div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/js-otp/dist/otp.min.js"></script>
     <script>
         let email = "";
-        let emailId = "";
+        let emailId = ""; // For Kopeechka email ID
         let checkInboxInterval = null;
         let countdownInterval = null;
-        const countdownTime = 5;
+        const countdownTime = 5; // 5-second interval for fetching
 
         function fetchEmail() {
             const emailProvider = document.getElementById("emailProvider").value;
@@ -214,19 +217,20 @@
                 });
         }
 
+
         function showProgressBarAndCountdown() {
             const progressBarContainer = document.getElementById("progressBarContainer");
             const progressBar = document.getElementById("progressBar");
             const countdownElement = document.getElementById("countdown");
-            progressBarContainer.style.display = 'block';
-            countdownElement.style.display = 'block';
-            startCountdown();
+            progressBarContainer.style.display = 'block'; // Show progress bar after email is fetched
+            countdownElement.style.display = 'block'; // Show countdown timer after email is fetched
+            startCountdown(); // Start countdown and progress bar synchronization
         }
 
         function checkInboxForCode(provider, orderId) {
             if (!email) return;
 
-           const checkInbox = () => {
+            const checkInbox = () => {
                 if (provider === "gmail") {
                     fetch(`https://rentgmail.online/prod/mail/order/mailOtp?orderId=${orderId}&token=eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhaGVybGFtYmFuZyIsInV1aWQiOiJhbHdheXMtNjUzIiwidXNlcmlkIjoiNjUzIn0.gHqNRBOJQa2agrAXBkbGDE-ibQW6vpUDbm9d3RtQ8L3kDu1ph8tHTD0ufMZgp8ks10G4PeNH82mh0fqgZW9yBQ`)
                         .then(response => response.json())
@@ -272,14 +276,16 @@
                 }
             };
 
+            // Start polling the inbox every 5 seconds
             checkInboxInterval = setInterval(checkInbox, countdownTime * 1000);
         }
 
+
         function stopProgressBarAndPolling() {
-            clearInterval(checkInboxInterval);
-            clearInterval(countdownInterval);
-            document.getElementById("progressBarContainer").style.display = 'none';
-            document.getElementById("countdown").style.display = 'none';
+            clearInterval(checkInboxInterval); // Stop polling the inbox
+            clearInterval(countdownInterval); // Stop the countdown
+            document.getElementById("progressBarContainer").style.display = 'none'; // Hide progress bar
+            document.getElementById("countdown").style.display = 'none'; // Hide countdown
         }
 
         function startCountdown() {
@@ -287,13 +293,13 @@
             const countdownElement = document.getElementById("countdown");
             const progressBar = document.getElementById("progressBar");
 
-            clearInterval(countdownInterval);
+            clearInterval(countdownInterval); // Clear any previous intervals
             countdownInterval = setInterval(() => {
                 countdownElement.innerHTML = `Next attempt in: ${timeLeft}s`;
-                progressBar.style.width = `${(timeLeft / countdownTime) * 100}%`;
+                progressBar.style.width = `${(timeLeft / countdownTime) * 100}%`; // Sync progress bar with time
                 timeLeft--;
                 if (timeLeft < 0) {
-                    timeLeft = countdownTime;
+                    timeLeft = countdownTime; // Reset countdown
                 }
             }, 1000);
         }
@@ -316,25 +322,6 @@
                 navigator.clipboard.writeText(emailText);
             }
         }
-
-        function update2FACode() {
-            const key = document.getElementById("twofaKey").value.trim();
-            const twofaCodeElement = document.getElementById("twofaCode");
-
-            if (key) {
-                try {
-                    const otp = new OTPAuth.TOTP({
-                        secret: OTPAuth.Secret.fromB32(key),
-                        algorithm: 'SHA-1',
-                        digits: 6,
-                        period: 30,
-                    });
-                    const code = otp.generate();
-                    twofaCodeElement.textContent = code;
-
-                    setTimeout(update2FACode, (30 - (Math.floor(Date.now() / 1000) % 30)) * 1000);
-                } catch (e) {
-                    twofaCodeElement.textContent = "Invalid 2FA key.";
-                }
-            } else {
-                twofaCodeElement.text
+    </script>
+</body>
+</html>
