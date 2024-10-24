@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Email Fetcher</title>
     <style>
-        /* Improved Styling */
         body {
             font-family: Arial, sans-serif;
             background-color: #f0f0f0;
@@ -14,38 +13,53 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
+            flex-direction: column;
         }
-
+        
+        .wrapper {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: flex-start;
+            flex-wrap: wrap; /* This ensures that the boxes stack on mobile */
+            gap: 20px; /* Space between the containers */
+            margin-top: 20px;
+        }
+        
         .container {
             background-color: white;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            width: 300px;
+            width: 100%;
+            max-width: 350px;
             text-align: center;
+            margin-bottom: 20px;
         }
-
-        select, button {
+        
+        select, button, input {
             margin: 10px 0;
             padding: 10px;
             width: 100%;
             font-size: 16px;
             border: 1px solid #ddd;
             border-radius: 4px;
+            box-sizing: border-box;
         }
-
+        
         button {
             background-color: #3498db;
             color: white;
+            cursor: pointer;
         }
-
+        
         button:hover {
             background-color: #2980b9;
         }
-
+        
         .loading-spinner {
-            display: none; /* Hidden initially */
+            display: none;
             margin: 20px auto;
             border: 4px solid #f3f3f3;
             border-radius: 50%;
@@ -54,81 +68,24 @@
             height: 30px;
             animation: spin 2s linear infinite;
         }
-
+        
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-
-        .waiting-message {
-            display: none;
-            margin-top: 10px;
-            color: #3498db;
-            font-size: 14px;
-        }
-
-        .progress-bar-container {
-            display: none; /* Hidden initially */
-            margin: 10px 0;
-            width: 100%;
-            height: 10px;
-            background-color: #e0e0e0;
-            border-radius: 5px;
-            overflow: hidden;
-        }
-
-        .progress-bar {
-            height: 100%;
-            width: 0;
-            background-color: #3498db;
-        }
-
-        .countdown {
-            display: none;
-            margin: 10px 0;
-            font-size: 16px;
-            color: #333;
-        }
-
-        .error-message {
-            color: red;
-            margin-top: 10px;
-        }
-
-        .result-container {
-            margin-top: 20px;
-        }
-
-        .copy-button {
-            margin-top: 10px;
-            padding: 10px;
-            background-color: #3498db;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .copy-button:hover {
-            background-color: #2980b9;
-        }
-
-        .bold {
-            font-weight: bold;
-        }
-
+        
         .twofa-container {
             margin-top: 30px;
             padding: 20px;
             border-top: 1px solid #ddd;
         }
-
+        
         .twofa-title {
             font-size: 18px;
             margin-bottom: 10px;
             font-weight: bold;
         }
-
+        
         .twofa-input {
             padding: 10px;
             font-size: 16px;
@@ -137,7 +94,7 @@
             border-radius: 4px;
             box-sizing: border-box;
         }
-
+        
         .twofa-code {
             font-size: 24px;
             font-weight: bold;
@@ -145,53 +102,62 @@
             margin-top: 10px;
             word-wrap: break-word;
         }
-
+        
         @media (max-width: 600px) {
+            .wrapper {
+                flex-direction: column; /* Stack containers vertically on small screens */
+                align-items: center;
+            }
+        
             body {
                 padding: 10px;
             }
-
+        
             .container {
                 padding: 15px;
+                max-width: 100%; /* Make the container take the full width */
             }
-
+        
             .twofa-code {
                 font-size: 20px;
             }
         }
 
+
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Fetch Email</h2>
-        <select id="emailProvider">
-            <option value="gmail.com">gmail.com</option>
-            <option value="icloud">icloud</option>
-            <option value="gmx.com">gmx.com</option>
-            <option value="hotmail.com">hotmail.com</option>
-        </select>
-        <button onclick="fetchEmail()">Fetch Email</button>
-        <div class="loading-spinner" id="loadingSpinner"></div> <!-- Spinner -->
-        <div class="waiting-message" id="waitingMessage">Waiting for code...</div>
-        <div class="progress-bar-container" id="progressBarContainer">
-            <div class="progress-bar" id="progressBar"></div> <!-- Progress bar -->
+    <div class="wrapper">
+        <div class="container">
+            <h2>Fetch Email</h2>
+            <select id="emailProvider">
+                <option value="gmail.com">gmail.com</option>
+                <option value="icloud">icloud</option>
+                <option value="gmx.com">gmx.com</option>
+                <option value="hotmail.com">hotmail.com</option>
+            </select>
+            <button onclick="fetchEmail()">Fetch Email</button>
+            <div class="loading-spinner" id="loadingSpinner"></div> <!-- Spinner -->
+            <div class="waiting-message" id="waitingMessage">Waiting for code...</div>
+            <div class="progress-bar-container" id="progressBarContainer">
+                <div class="progress-bar" id="progressBar"></div> <!-- Progress bar -->
+            </div>
+            <div class="countdown" id="countdown">Next attempt in: 5s</div> <!-- Countdown Timer -->
+            <div id="message" class="error-message"></div>
+            <div class="result-container" id="resultContainer">
+                <p id="email"></p> <!-- Email is shown directly, no label -->
+                <p id="confirmationCode"></p> <!-- To display confirmation code -->
+                <button class="copy-button" id="copyCodeButton" onclick="copyCodeToClipboard()" style="display: none;">Copy Code</button> <!-- Copy Code Button -->
+                <button class="copy-button" id="copyButton" onclick="copyToClipboard()" style="display: none;">Copy Email</button> <!-- Initially hidden -->
+            </div>
         </div>
-        <div class="countdown" id="countdown">Next attempt in: 5s</div> <!-- Countdown Timer -->
-        <div id="message" class="error-message"></div>
-        <div class="result-container" id="resultContainer">
-            <p id="email"></p> <!-- Email is shown directly, no label -->
-            <p id="confirmationCode"></p> <!-- To display confirmation code -->
-            <button class="copy-button" id="copyCodeButton" onclick="copyCodeToClipboard()" style="display: none;">Copy Code</button> <!-- Copy Code Button -->
-            <button class="copy-button" id="copyButton" onclick="copyToClipboard()" style="display: none;">Copy Email</button> <!-- Initially hidden -->
+    
+        <!-- 2FA Generator Section -->
+        <div class="container">
+            <h3 class="twofa-title">2FA Code Generator</h3>
+            <input type="text" id="twofaKey" class="twofa-input" placeholder="Enter your 2FA key" />
+            <div id="twofaCode" class="twofa-code">Waiting for key...</div>
         </div>
-    </div>
-
-    <!-- 2FA Generator Section -->
-    <div class="container">
-        <h3 class="twofa-title">2FA Code Generator</h3>
-        <input type="text" id="twofaKey" class="twofa-input" placeholder="Enter your 2FA key" />
-        <div id="twofaCode" class="twofa-code">Waiting for key...</div>
     </div>
 
     <script>
