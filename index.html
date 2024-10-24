@@ -347,24 +347,29 @@
         
             if (key) {
                 try {
+                    // Create a TOTP instance with the provided key
                     const otp = new OTPAuth.TOTP({
-                        secret: OTPAuth.Secret.fromB32(key),
-                        algorithm: 'SHA-1',
-                        digits: 6,
-                        period: 30,
+                        secret: OTPAuth.Secret.fromB32(key), // Base32 secret
+                        algorithm: 'SHA-1', // Ensure this matches the algorithm used when the key was generated
+                        digits: 6, // Common length for TOTP codes
+                        period: 30 // Common period for TOTP codes (30 seconds)
                     });
+                    // Generate the current TOTP code
                     const code = otp.generate();
                     twofaCodeElement.textContent = code;
         
-                    // Update the code every 30 seconds when it changes
+                    // Schedule the next update to match the next period change
                     setTimeout(update2FACode, (30 - (Math.floor(Date.now() / 1000) % 30)) * 1000);
                 } catch (e) {
+                    // Display a detailed error message
+                    console.error('Error generating 2FA code:', e);
                     twofaCodeElement.textContent = "Invalid 2FA key.";
                 }
             } else {
                 twofaCodeElement.textContent = "Waiting for key...";
             }
         }
+
 
         // Attach event listener to update the code when the key changes
         document.getElementById("twofaKey").addEventListener("input", update2FACode);
