@@ -160,7 +160,39 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/otpauth"></script>
+    <script type="module">
+        import { TOTP, Secret } from 'https://cdn.jsdelivr.net/npm/otpauth@9.3.4/dist/otpauth.esm.js';
+
+        document.addEventListener("DOMContentLoaded", function() {
+            document.getElementById("fetchButton").addEventListener("click", fetchEmail);
+            document.getElementById("twofaKey").addEventListener("input", update2FACode);
+        });
+
+        function update2FACode() {
+            const key = document.getElementById("twofaKey").value.trim().replace(/\s+/g, '');
+            const twofaCodeElement = document.getElementById("twofaCode");
+
+            if (key) {
+                try {
+                    const otp = new TOTP({
+                        secret: Secret.fromB32(key),
+                        algorithm: 'SHA-1',
+                        digits: 6,
+                        period: 30
+                    });
+                    const code = otp.generate();
+                    twofaCodeElement.textContent = code;
+
+                    setTimeout(update2FACode, (30 - (Math.floor(Date.now() / 1000) % 30)) * 1000);
+                } catch (e) {
+                    console.error('Error generating 2FA code:', e);
+                    twofaCodeElement.textContent = "Invalid 2FA key.";
+                }
+            } else {
+                twofaCodeElement.textContent = "Waiting for key...";
+            }
+        }
+    </script>
     <script>
         let email = "";
         let emailId = ""; // For Kopeechka email ID
@@ -341,39 +373,6 @@
             }
         }
 
-         // Function to generate and update the 2FA code
-       function update2FACode() {
-            const key = document.getElementById("twofaKey").value.trim().replace(/\s+/g, '');
-            const twofaCodeElement = document.getElementById("twofaCode");
-        
-            if (key) {
-                try {
-                    // Create a TOTP instance with the provided key
-                    const otp = new OTPAuth.TOTP({
-                        secret: OTPAuth.Secret.fromB32(key), // Base32 secret
-                        algorithm: 'SHA-1', // Ensure this matches the algorithm used when the key was generated
-                        digits: 6, // Common length for TOTP codes
-                        period: 30 // Common period for TOTP codes (30 seconds)
-                    });
-                    // Generate the current TOTP code
-                    const code = otp.generate();
-                    twofaCodeElement.textContent = code;
-        
-                    // Schedule the next update to match the next period change
-                    setTimeout(update2FACode, (30 - (Math.floor(Date.now() / 1000) % 30)) * 1000);
-                } catch (e) {
-                    // Display a detailed error message
-                    console.error('Error generating 2FA code:', e);
-                    twofaCodeElement.textContent = "Invalid 2FA key.";
-                }
-            } else {
-                twofaCodeElement.textContent = "Waiting for key...";
-            }
-        }
-
-
-        // Attach event listener to update the code when the key changes
-        document.getElementById("twofaKey").addEventListener("input", update2FACode);
 
         // Initial call to display the code if a key is present
         update2FACode();
